@@ -14,7 +14,7 @@ global hvarsflow "hil hic pension hits hitsil hitsup hitsap hxit hxiti hxits hc 
 
 global hvarsnew "hsscer hsscee" // Local currency, imputed
 
-global hvarsinc "inc1 inc2 inc3 inc4 tax transfer allpension pubpension pripension hssc" // Summation / imputed after PPP conversion
+global hvarsinc "inc1 inc2 inc3 inc4 inc5 inc6 tax transfer allpension pubpension pripension hssc" // Summation / imputed after PPP conversion /*VA add inc5 inc6*/
 
 global fixpensions_datasets1 "at04 ee10 gr00 lu04 nl04 no04 no10 se00 se05"  // hitsil missing, hicvip defined
 
@@ -28,29 +28,31 @@ global fixpension_datasets3 "ie04 ie07 ie10 uk99 uk04 uk07 uk10"
 *************************************************************
 
 program define merge_ssc
-  merge m:1 dname using "$mydata/molcke/molcke_ssc_20160630.dta", keep(match) nogenerate
+  merge m:1 dname using "$mydata/vamour/ssc_20180606.dta", keep(match) nogenerate
 end
 
 program define gen_employee_ssc
   * Generate Employee Social Security Contributions
+  /*In general, PIL is gross in the sense of wage so it's correct to just multiply by the rate applied to the gross salary*/
   gen psscee=.
   replace psscee = pil*ee_r1
   replace psscee = (pil-ee_c1)*ee_r2 + ee_r1*ee_c1  if pil>ee_c1 & ee_c1!=.
   replace psscee = (pil-ee_c2)*ee_r3 + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1 if pil>ee_c2 & ee_c2!=.
   replace psscee = (pil-ee_c3)*ee_r4 + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1 if pil>ee_c3 & ee_c3!=.
   replace psscee = (pil-ee_c4)*ee_r5 + ee_r4*(ee_c4 - ee_c3) + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1 if pil>ee_c4 & ee_c4!=.
-  replace psscee = (pil-ee_c5)*ee_r6 + ee_r5*(ee_c5 - ee_c4) + ee_r4*(ee_c4 - ee_c3) + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1  if pil>ee_c5 & ee_c5!=.
+  /*replace psscee = (pil-ee_c5)*ee_r6 + ee_r5*(ee_c5 - ee_c4) + ee_r4*(ee_c4 - ee_c3) + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1  if pil>ee_c5 & ee_c5!=.*/ /*VA change the stata file*/
 end
 
 program define gen_employer_ssc
   * Generate Employer Social Security Contributions
+  
   gen psscer=.
   replace psscer = pil*er_r1
   replace psscer = (pil-er_c1)*er_r2 + er_r1*er_c1  if pil>er_c1 & er_c1!=.
   replace psscer = (pil-er_c2)*er_r3 + er_r2*(er_c2 - er_c1) + er_r1*er_c1 if pil>er_c2 & er_c2!=.
   replace psscer = (pil-er_c3)*er_r4 + er_r3*(er_c3 - er_c2) + er_r2*(er_c2 - er_c1) + er_r1*er_c1 if pil>er_c3 & er_c3!=.
   replace psscer = (pil-er_c4)*er_r5 + er_r4*(er_c4 - er_c3) + er_r3*(er_c3 - er_c2) + er_r2*(er_c2 - er_c1) + er_r1*er_c1 if pil>er_c4 & er_c4!=.
-  replace psscer = (pil-er_c5)*er_r6 + er_r5*(er_c5 - er_c4) + er_r4*(er_c4 - er_c3) + er_r3*(er_c3 - er_c2) + er_r2*(er_c2 - er_c1) + er_r1*er_c1  if pil>er_c5 & er_c5!=.
+ /* replace psscer = (pil-er_c5)*er_r6 + er_r5*(er_c5 - er_c4) + er_r4*(er_c4 - er_c3) + er_r3*(er_c3 - er_c2) + er_r2*(er_c2 - er_c1) + er_r1*er_c1  if pil>er_c5 & er_c5!=.*/ /*VA change the Stata file*/
 end
 
 program define convert_ssc_to_household_level
@@ -90,14 +92,17 @@ program define FR_gen_pvars
   gen pxiti = hxiti/hemp
   replace pxiti =. if emp!=1
   **IMPORTANT**Generate Employee Social Security Contributions
+  /*VA We assume that the original INSEE survey provides information about actual "net" wages in the sense "net of all contributions" and not in the sense of "declared income", which contains non deductible CSG. If not, one should 
+  remove this rate in the excel file and add it manually after we have the gross income*/
+
   gen psscee=.
-  replace psscee = ((pil*ee_r1)/(1-ee_r1))
-  replace psscee = (((pil-ee_c1)*ee_r2)/(1-ee_r2))  + ee_r1*ee_c1  if pil>ee_c1mix & ee_c1mix!=.
-  replace psscee = (((pil-ee_c2)*ee_r3)/(1-ee_r3))  + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1 if pil>ee_c2mix & ee_c2mix!=.
-  replace psscee = (((pil-ee_c3)*ee_r4)/(1-ee_r4))  + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1 if pil>ee_c3mix & ee_c3mix!=.
-  replace psscee = (((pil-ee_c4)*ee_r5)/(1-ee_r5))  + ee_r4*(ee_c4 - ee_c3) + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1 if pil>ee_c4mix & ee_c4mix!=.
-  replace psscee = (((pil-ee_c5)*ee_r6)/(1-ee_r6))  + ee_r5*(ee_c5 - ee_c4) + ee_r4*(ee_c4 - ee_c3) + ee_r3*(ee_c3 - ee_c2) + ee_r2*(ee_c2 - ee_c1) + ee_r1*ee_c1  if pil>ee_c5mix & ee_c5mix!=.
+  replace psscee = pil*ee_r1/(1-ee_r1) if pil>0 & pil<=(ee_c1 - ee_r1*ee_c1) 
+  replace psscee = 1/(1-ee_r2)*(ee_r2*(pil - ee_c1) + ee_r1*ee_c1) if pil>(ee_c1 - ee_r1*ee_c1) & pil<=(ee_c2 - ee_r1*ee_c1 - ee_r2*(ee_c2-ee_c1))
+  replace psscee = 1/(1-ee_r3)*(ee_r3*(pil - ee_c2) + ee_r1*ee_c1 + ee_r2*(ee_c2-ee_c1)) if pil>(ee_c2 - ee_r2*(ee_c2-ee_c1) - ee_r1*ee_c1) & pil<=(ee_c3 - ee_r3*(ee_c3-ee_c2) - ee_r2*(ee_c2-ee_c1) - ee_r1*ee_c1)
+  replace psscee = 1/(1-ee_r4)*(ee_r4*(pil - ee_c3) + ee_r1*ee_c1 + ee_r2*(ee_c2-ee_c1) + ee_r3*(ee_c3 - ee_c2)) if pil>(ee_c3 - ee_r3*(ee_c3-ee_c2) - ee_r2*(ee_c2-ee_c1) - ee_r1*ee_c1)
+
   **IMPORTANT**Convert French datasets from net to gross
+
   replace pil=pil+pxiti+psscee
   gen_employer_ssc
   manual_corrections_employer_ssc
@@ -134,6 +139,7 @@ end
 
 program define manual_corrections_employee_ssc
   * Manual corrections for certain datasets (Employee Social Security Contributions)
+
   *Belgium 2000 BE00
   replace psscee=psscee-2600 if pil>34000 & pil<=42500 & dname=="be00"
   replace psscee=psscee-(2600-0.4*(pil-42500)) if pil>42500 & pil<=4900 & dname=="be00"
@@ -161,8 +167,17 @@ end
 
 program define manual_corrections_employer_ssc
   * Manual corrections for certain datasets (Employer Social Security Contributions)
+    *VA: Germany global rate for low income (De): 2004
+  replace psscer = 0.25*pil if pil<4800 & dname=="de04" | dname=="de07"
+  *Germany 2010 de10 (VA)
+  replace psscer = 0.30*pil if pil<4800 & dname=="de10" 
+
   *Estonia 2010 ee10
   replace psscer = psscer + 17832 if pil>0 & dname=="ee10"
+  *Hungary 2005 hu05 VA
+  replace psscer = psscer + 3450*10 + 1950*2 if pil>0 & dname=="hu05"
+  *Hungary 2007 2009 hu07 hu09 VA
+  replace psscer = psscer + 1950*12 if pil>0 & dname=="hu07"|dname=="hu09"
   *Ireland 2000 ie00
   replace psscer=pil*.085 if  pil<14560 & dname=="ie00" // I could have easily included these changes for Ireland in the rates and ceilings.
   *Ireland 2004 ie04
@@ -172,12 +187,43 @@ program define manual_corrections_employer_ssc
   *Ireland 2010 ie10
   replace psscer=pil*.085 if  pil<18512 & dname=="ie10"
   *France 2000 fr00 (measured in Francs, not Euros)
-  replace psscer=psscer-(0.182*pil) if pil<=83898 & dname=="fr00"
-  replace psscer=psscer-(0.55*(111584.34-pil)) if pil>83898 & pil<=111584.34 & dname=="fr00"
+  replace psscer=psscer-(0.182*pil) if pil<=83898 & dname=="fr00" /*VA 83 898 = average annual Smic for the year 2000*/ 
+  replace psscer=psscer-(0.55*(111584.34-pil)) if pil>83898 & pil<=111584.34 & dname=="fr00" /*VA I think it is 1.3 Smic instead of 1.33 and a .607 negative slope*/
+ 
   *France 2005 fr05
-  replace psscer=psscer-((0.26/0.6)*((24692.8/pil)-1)*pil) if pil>15433 & pil<24692.8 & dname=="fr05" //I am not sure I have this adjustment correct.
+  replace psscer=psscer-((0.26/0.6)*((24692.8/pil)-1)*pil) if pil>15433 & pil<24692.8 & dname=="fr05" //I am not sure I have this adjustment correct. VA I don't understand why the Smic is at 15 433
   *France 2010 fr10
-  replace psscer=psscer-((0.26/0.6)*((25800.32/pil)-1)*pil) if pil>16125 & pil<25800.32 & dname=="fr10"
+  replace psscer=psscer-((0.26/0.6)*((25800.32/pil)-1)*pil) if pil>16125 & pil<25800.32 & dname=="fr10" /*VA Smic ok*/
+  
+  *Mexico 2000 mx00 VA
+  replace psscer=psscer + 0.152*35.12*365 if pil>0 & dname=="mx00"
+  replace psscer=psscer + 0.0502*(pil-3*35.12*365) if pil>3*35.12*365 & dname=="mx00"
+  *Mexico 2002 mx02 VA
+  replace psscer=psscer + 0.165*39.74*365 if pil>0 & dname=="mx02"
+  replace psscer=psscer + 0.0404*(pil-3*39.74*365) if pil>3*39.74*365 & dname=="mx02"
+ *Mexico 2004 mx04 VA
+  replace psscer=psscer + 0.178*45.24*365 if pil>0 & dname=="mx04"
+  replace psscer=psscer + 0.0306*(pil-3*45.24*365) if pil>3*45.24*365 & dname=="mx04"
+ *Mexico 2008 mx08 VA
+  replace psscer=psscer + 0.204*52.59*365 if pil>0 & dname=="mx08"
+  replace psscer=psscer + 0.011*(pil-3*52.59*365) if pil>3*52.59*365 & dname=="mx08"
+ *Mexico 2010 mx10 VA
+  replace psscer=psscer + 0.204*57.46*365 if pil>0 & dname=="mx10"
+  replace psscer=psscer + 0.011*(pil-3*57.46*365) if pil>3*57.46*365 & pil<25*57.46*365 & dname=="mx10"
+  replace psscer=psscer + 0.011*((25-3)*57.46*365)	 if pil>25*57.46*365 & dname=="mx10"
+ *Mexico 2012 mx12 VA
+  replace psscer=psscer + 0.204*62.33*365 if pil>0 & dname=="mx10"
+  replace psscer=psscer + 0.011*(pil-3*62.33*365) if pil>3*62.33*365 & pil<25*62.33*365 & dname=="mx10"
+  replace psscer=psscer + 0.011*((25-3)*62.33*365)	 if pil>25*62.33*365 & dname=="mx10"
+
+  *Netherlands 1999 nl99 VA
+  replace psscer=psscer + 0.0585*pil  if pil>0 & pil<54810 & dname=="nl99"
+  replace psscer=psscer + 0.0585*54810  if pil>0 & pil<64300 & dname=="nl99"
+  *Netherlands 2004 nl04 VA
+  replace psscer=psscer + 0.0675*pil  if pil>0 & pil<29493 & dname=="nl04"
+  replace psscer=psscer + 0.0675*29493  if pil>0 & pil<32600 & dname=="nl04"
+ 
+
 end
 
 ***************************************************************************
@@ -215,16 +261,22 @@ program define inc_and_decile
   gen inc3 = marketincome + allpension + transfer
   gen inc4 = marketincome + allpension + transfer - tax
 
+ /*VA display des indicateurs de revenus bruts et nets.
+ NB on appelle inc5 et inc6 mais si on intègre TVA il faudra les nommers inc6 et inc7  */
+  gen inc5 = marketincome + allpension + transfer - hsscer /*revenus brut au sens français*/
+  gen inc6 = marketincome + allpension + transfer - hsscer - hxits  /*revenus net au sens français*/
   * Trim and bottom code
   // The preceding steps are in the ppp_equiv program
   * Step 3
   foreach var in $hvarsflow $hvarsnew {
   replace `var' = 0 if `var' < 0
   }
-  * Define the income deciles
-  xtile decile = inc2 [w=hwgt*nhhmem], nquantiles(10) // already corrected for household size by ppp_equiv
-  xtile hhaa_decile = inc2 [w=hwgt*nhhmem] if hhactivage==1, nquantiles(10) // already corrected for household size by ppp_equiv
-
+  * Define the income deciles for various concepts of income
+  /*VA modif : loop*/
+  forvalues i = 1/6{
+  xtile decile_`i' = inc`i' [w=hwgt*nhhmem], nquantiles(10) // already corrected for household size by ppp_equiv
+  xtile hhaa_decile_`i' = inc`i' [w=hwgt*nhhmem] if hhactivage==1, nquantiles(10) // already corrected for household size by ppp_equiv
+}
 end
 
 **************************************************
@@ -269,7 +321,7 @@ transfers in Sweden and Norway. The following code adjusts the definitions of
 the income variables for use in Sweden and Norway */
 
 program define fix_pensions_type1
-  drop pubpension transfer inc1 inc2 inc3 inc4 decile hhaa_decile
+  drop pubpension transfer inc1 inc2 inc3 inc4 inc5 inc6 decile_1 decile_2 decile_3 decile_4 decile_5 decile_6 hhaa_decile_1 hhaa_decile_2 hhaa_decile_3 hhaa_decile_4 hhaa_decile_5 hhaa_decile_6/*VA ajout des  decile à drop*/
   gen pubpension = pension - hicvip - hitsap
   *gen pripension = hicvip // No change
   *gen allpension = pension - hitsap // No change
@@ -291,7 +343,7 @@ pensions, a subcategory of assistance benefits) out of transfers, and into
 pensions.  */
 
 program define fix_pensions_type3
-  drop pubpension allpension transfer inc1 inc2 inc3 inc4 decile hhaa_decile
+  drop pubpension allpension transfer inc1 inc2 inc3 inc4 inc5 inc6 decile_1 decile_2 decile_3 decile_4 decile_5 decile_6 hhaa_decile_1 hhaa_decile_2 hhaa_decile_3 hhaa_decile_4 hhaa_decile_5 hhaa_decile_6
   gen pubpension = hitsil + hitsup + hitsap // Added "+hitsap"
   *gen pripension = hicvip // No change
   gen allpension = pension // Removed "-hitsap"
@@ -308,7 +360,7 @@ end
 ***************************************************************************
 
 program define FR_def_tax_and_transfer
-  drop tax inc1 inc2 inc3 inc4 decile hhaa_decile marketincome
+  drop tax inc1 inc2 inc3 inc4 inc5 inc6  decile_1 decile_2 decile_3 decile_4 decile_5 decile_6 hhaa_decile_1 hhaa_decile_2 hhaa_decile_3 hhaa_decile_4 hhaa_decile_5 hhaa_decile_6 marketincome
   * Impute the taxes CSG and CRDS
   FR_tax_CSG_CRDS
   * Define the components of the income stages
@@ -324,9 +376,9 @@ program define FR_tax_CSG_CRDS
   * Labour income
   // CSG and CRDS on labour income is imputed within Employee SSC
   * Capital income
-  gen hic_csg_crds = hic * 0.087 if dname =="fr00"
+  gen hic_csg_crds = hic * 0.08 if dname =="fr00"
   replace hic_csg_crds = hic * 0.087 if dname =="fr05"
-  replace hic_csg_crds = hic * 0.08  if dname =="fr10"
+  replace hic_csg_crds = hic * 0.087  if dname =="fr10" /*VA changer le taux en 0.087 au lieu de 0.08*/
   * Pensions
     *Family share
     gen N = (nhhmem - nhhmem17)
@@ -335,14 +387,48 @@ program define FR_tax_CSG_CRDS
     replace C = 1 + (nhhmem17 - 2) if nhhmem17>2
     gen familyshare = N + C
     drop N C
-    *Imputation
+	
+    *Imputation 
+	
+	/*VA correction : je pense qu'il y a un certain nombre d'erreurs dans le prog initial : 
+	(i) avant 2015, le critère de taux réduit était un critère d'imposabilité et non de revenu fiscal de référence (RFR) qui ne vaut que pour le critère d'exonération :
+		- taux réduit : être au-dessus du seuil d'exo mais pas imposable
+		- taux plein : être au-dessuss du seuil d'exo et imposable
+		NB : si LIS est poursuivi après 2015 (par exemple avec BdF 2016) il faudra changer ça et bien mettre les deux critères de RFR
+		
+	(ii) vu le concept de revenu en France (i.e. net), on peut calculer le RFR : il s'agit des revenus nets + CSG non déductible, moins abattements. Vu que la CSG à taux réduit est intégralement déductible,
+	cela facilite les choses : pour nos retraités, retraite au sens du RFR = retraite nette - abattements ... Les abattements son multiples mais j'ai mis le principal : abattement de 10 % pour frais pros en l'appliquant au salaire augmenté de la CSG non déductible et 
+	aux pensions (pas au capital).
+	Il y a aussi des abattements spéciaux personnes âgées  mais ceux ci sont un peu compliqués à calculer et je ne suis pas sûr qu'ils rentrent dans le concept du RFR (je crois que c'est la différence entre "brut" au sens des impôts et RFR...
+	
+	
+	(iii) la parenthèse est au mauvais endroit et je pense que du coup personne n'est à la CSG parmi les retraités
+	
+	(iv) Le seuil de RFR par demi-part supplémentaire doit être multiplié par un facteur 2 : en effet, chaque demi-part compte pour "une" unité : ex : 1 part supplémentaire = 2 demi-parts => 2*le seuil pour une demi-part sup
+	
+	(v) Si les pensions initiales sont bien "nettes" au sens sans CSG, il faut faire la règle de 3 inversée : pension nette = (1-tx_CSG)*brute d'où pension brute = 1/(1-tx_CSG)*pension nette et Montant de CSG =tx_CSG/(1-tx_CSG)*pension nette
+	
+	*/
     gen pension_csg_crds = 0
-    replace pension_csg_crds = 0.043*(hitsil + hitsup) if hil > (6584+(familyshare - 1))*1759 & dname=="fr00" // 2002 figures deflated to 2000 prices using WDI CPI
+	gen hil_temp=hil-hxiti-hsscee /*On regarde bien le salaire net pour calculer le RFR*/
+    /*replace pension_csg_crds = 0.043*(hitsil + hitsup) if hil > (6584+(familyshare - 1))*1759 & dname=="fr00" // 2002 figures deflated to 2000 prices using WDI CPI
     replace pension_csg_crds = 0.067*(hitsil + hitsup) if hil > (7796+(familyshare - 1))*2120 & dname=="fr00" // 2002 figures deflated to 2000 prices using WDI CPI
     replace pension_csg_crds = 0.043*(hitsil + hitsup) if hil > (7165+(familyshare - 1))*1914 & dname=="fr05"
     replace pension_csg_crds = 0.071*(hitsil + hitsup) if hil > (8492+(familyshare - 1))*2308 & dname=="fr05"
     replace pension_csg_crds = 0.043*(hitsil + hitsup) if hil > (9876+(familyshare - 1))*2637 & dname=="fr10"
-    replace pension_csg_crds = 0.071*(hitsil + hitsup) if hil > (11793+(familyshare - 1))*3178 & dname=="fr10"
+    replace pension_csg_crds = 0.071*(hitsil + hitsup) if hil > (11793+(familyshare - 1))*3178 & dname=="fr10"*/
+	
+	replace pension_csg_crds = 0.043/(1-0.043)*(hitsil + hitsup) if ((hil_temp/(1-0.024*0.97) + hitsil + hitsup)*0.9 + hic) > (6584+2*(familyshare - 1)*1759) & hxit<=0 & dname=="fr00" // 2002 figures deflated to 2000 prices using WDI CPI
+    replace pension_csg_crds = 0.067/(1-0.067)*(hitsil + hitsup) if ((hil_temp/(1-0.024*0.97) + hitsil + hitsup)*0.9 + hic) > (6584+2*(familyshare - 1)*1759) & hxit>0 & dname=="fr00" // 2002 figures deflated to 2000 prices using WDI CPI
+    
+	replace pension_csg_crds = 0.043/(1-0.043)*(hitsil + hitsup) if ((hil_temp/(1-0.024*0.97) + hitsil + hitsup)*0.9 + hic) > (7165+2*(familyshare - 1)*1914) & hxit<=0 & dname=="fr05"
+    replace pension_csg_crds = 0.071/(1-0.071)*(hitsil + hitsup) if ((hil_temp/(1-0.024*0.97)+ hitsil + hitsup)*0.9 + hic) >  (7165+2*(familyshare - 1)*1914) & hxit>0 & dname=="fr05"
+   
+	replace pension_csg_crds = 0.043/(1-0.043)*(hitsil + hitsup) if ((hil_temp/(1-0.024*0.97) + hitsil + hitsup)*0.9 + hic) > (9876+2*(familyshare - 1)*2637) & hxit<=0 & dname=="fr10"
+    replace pension_csg_crds = 0.071/(1-0.071)*(hitsil + hitsup) if ((hil_temp/(1-0.024*0.97) + hitsil + hitsup)*0.9 + hic) > (9876+2*(familyshare - 1)*2637) & hxit>0& dname=="fr10"
+	
+	drop hil_temp
+	/*Warning : à partir de 2011 (i.e. pour le prochain LIS, l'abattement CSG activité passe à 1.75 %*/
 end
 
 ***************************************************************
@@ -384,6 +470,8 @@ foreach ccyy in $datasets {
   else {
     quietly gen_pvars
   }
+  
+  
   quietly merge 1:1 hid using $`ccyy'h, keepusing($hvars $hvarsflow) nogenerate
   if "`cc'" == "fr" {
     quietly correct_dhi
@@ -408,44 +496,49 @@ foreach ccyy in $datasets {
     local `var'_mean = r(mean)
 	quietly sum `var' [w=hwgt*nhhmem] if hhactivage==1
     local hhaa_`var'_mean = r(mean)
-    foreach sortvar in inc1 inc2 inc3 inc4 {
+	/*Bien rajouter inc5 et inc6*/
+    foreach sortvar in inc1 inc2 inc3 inc4 inc5 inc6 {
       quietly capture sgini `var' [aw=hwgt*nhhmem], sortvar(`sortvar')
       local `var'conc_`sortvar' = r(coeff)
-	  quietly capture sgini `var' [aw=hwgt*nhhmem] if hhactivage==1, sortvar(`sortvar')
+	  quietly capture sgini `var' [aw=hwgt*nhhmem] if hhactivage==1, sortvar(`sortvar')	
       local hhaa_`var'conc_`sortvar' = r(coeff)
       }
-    forvalues num = 1/10 {
-      quietly sum `var' [w=hwgt*nhhmem] if decile==`num'
-      local `var'_mean_`num' = r(mean)
-      local `var'_min_`num' = r(min)
-      local `var'_max_`num' = r(max)
+    /*VA modif : boucle par catégorie de décile*/
+	forvalues i = 1/6{
+		forvalues num = 1/10 {
+			quietly sum `var' [w=hwgt*nhhmem] if decile_`i'==`num'
+			local `var'_mean_`num'_`i' = r(mean)
+			local `var'_min_`num'_`i' = r(min)
+			local `var'_max_`num'_`i' = r(max)
       }
+	 }
    }
-     if "`ccyy'" == "at04" di "countryyear,decile,inc1_mean,inc1_min,inc1_max,inc2_mean,inc2_min,inc2_max,inc3_mean,inc3_min,inc3_max,inc4_mean,inc4_min,inc4_max,transfer_mean,transfer_min,transfer_max,tax_mean,tax_min,tax_max"
-     di "`ccyy',D01,`inc1_mean_1',`inc1_min_1',`inc1_max_1',`inc2_mean_1',`inc2_min_1',`inc2_max_1',`inc3_mean_1',`inc3_min_1',`inc3_max_1',`inc4_mean_1',`inc4_min_1',`inc4_max_1',`transfer_mean_1',`transfer_min_1',`transfer_max_1',`tax_mean_1',`tax_min_1',`tax_max_1'"
-     di "`ccyy',D02,`inc1_mean_2',`inc1_min_2',`inc1_max_2',`inc2_mean_2',`inc2_min_2',`inc2_max_2',`inc3_mean_2',`inc3_min_2',`inc3_max_2',`inc4_mean_2',`inc4_min_2',`inc4_max_2',`transfer_mean_2',`transfer_min_2',`transfer_max_2',`tax_mean_2',`tax_min_2',`tax_max_2'"
-     di "`ccyy',D03,`inc1_mean_3',`inc1_min_3',`inc1_max_3',`inc2_mean_3',`inc2_min_3',`inc2_max_3',`inc3_mean_3',`inc3_min_3',`inc3_max_3',`inc4_mean_3',`inc4_min_3',`inc4_max_3',`transfer_mean_3',`transfer_min_3',`transfer_max_3',`tax_mean_3',`tax_min_3',`tax_max_3'"
-     di "`ccyy',D04,`inc1_mean_4',`inc1_min_4',`inc1_max_4',`inc2_mean_4',`inc2_min_4',`inc2_max_4',`inc3_mean_4',`inc3_min_4',`inc3_max_4',`inc4_mean_4',`inc4_min_4',`inc4_max_4',`transfer_mean_4',`transfer_min_4',`transfer_max_4',`tax_mean_4',`tax_min_4',`tax_max_4'"
-     di "`ccyy',D05,`inc1_mean_5',`inc1_min_5',`inc1_max_5',`inc2_mean_5',`inc2_min_5',`inc2_max_5',`inc3_mean_5',`inc3_min_5',`inc3_max_5',`inc4_mean_5',`inc4_min_5',`inc4_max_5',`transfer_mean_5',`transfer_min_5',`transfer_max_5',`tax_mean_5',`tax_min_5',`tax_max_5'"
-     di "`ccyy',D06,`inc1_mean_6',`inc1_min_6',`inc1_max_6',`inc2_mean_6',`inc2_min_6',`inc2_max_6',`inc3_mean_6',`inc3_min_6',`inc3_max_6',`inc4_mean_6',`inc4_min_6',`inc4_max_6',`transfer_mean_6',`transfer_min_6',`transfer_max_6',`tax_mean_6',`tax_min_6',`tax_max_6'"
-     di "`ccyy',D07,`inc1_mean_7',`inc1_min_7',`inc1_max_7',`inc2_mean_7',`inc2_min_7',`inc2_max_7',`inc3_mean_7',`inc3_min_7',`inc3_max_7',`inc4_mean_7',`inc4_min_7',`inc4_max_7',`transfer_mean_7',`transfer_min_7',`transfer_max_7',`tax_mean_7',`tax_min_7',`tax_max_7'"
-     di "`ccyy',D08,`inc1_mean_8',`inc1_min_8',`inc1_max_8',`inc2_mean_8',`inc2_min_8',`inc2_max_8',`inc3_mean_8',`inc3_min_8',`inc3_max_8',`inc4_mean_8',`inc4_min_8',`inc4_max_8',`transfer_mean_8',`transfer_min_8',`transfer_max_8',`tax_mean_8',`tax_min_8',`tax_max_8'"
-     di "`ccyy',D09,`inc1_mean_9',`inc1_min_9',`inc1_max_9',`inc2_mean_9',`inc2_min_9',`inc2_max_9',`inc3_mean_9',`inc3_min_9',`inc3_max_9',`inc4_mean_9',`inc4_min_9',`inc4_max_9',`transfer_mean_9',`transfer_min_9',`transfer_max_9',`tax_mean_9',`tax_min_9',`tax_max_9'"
-     di "`ccyy',D10,`inc1_mean_10',`inc1_min_10',`inc1_max_10',`inc2_mean_10',`inc2_min_10',`inc2_max_10',`inc3_mean_10',`inc3_min_10',`inc3_max_10',`inc4_mean_10',`inc4_min_10',`inc4_max_10',`transfer_mean_10',`transfer_min_10',`transfer_max_10',`tax_mean_10',`tax_min_10',`tax_max_10'"
-     if "`ccyy'" == "at04"  di "Inequality Measures 1,countryyear,inc1_gini,inc2_gini,inc3_gini,inc4_gini,dhi_gini,transfer_conc_inc1,transfer_conc_inc2,transfer_conc_inc3,transfer_conc_inc4,tax_conc_inc1,tax_conc_inc2,tax_conc_inc3,tax_conc_inc4"
-     di "Inequality Measures 1,`ccyy',`inc1_gini',`inc2_gini',`inc3_gini',`inc4_gini',`dhi_gini',`transferconc_inc1',`transferconc_inc2',`transferconc_inc3',`transferconc_inc4',`taxconc_inc1',`taxconc_inc2',`taxconc_inc3',`taxconc_inc4'"
-     if "`ccyy'" == "at04"  di "Inequality Measures 2,countryyear,allpension_conc_inc1,allpension_conc_inc2,allpension_conc_inc3,allpension_conc_inc4,pubpension_conc_inc1,pubpension_conc_inc2,pubpension_conc_inc3,pubpension_conc_inc4,pripension_conc_inc1,pripension_conc_inc2,pripension_conc_inc3,pripension_conc_inc4"
-     di "Inequality Measures 2,`ccyy',`allpensionconc_inc1',`allpensionconc_inc2',`allpensionconc_inc3',`allpensionconc_inc4',`pubpensionconc_inc1',`pubpensionconc_inc2',`pubpensionconc_inc3',`pubpensionconc_inc4',`pripensionconc_inc1',`pripensionconc_inc2',`pripensionconc_inc3',`pripensionconc_inc4'"
-     if "`ccyy'" == "at04"  di "Inequality Measures 3,countryyear,inc1_mean,inc2_mean,inc3_mean,inc4_mean,dhi_mean,transfer_mean,tax_mean,allpension_mean,pubpension_mean,pripension_mean"
-     di "Inequality Measures 3,`ccyy',`inc1_mean',`inc2_mean',`inc3_mean',`inc4_mean',`dhi_mean',`transfer_mean',`tax_mean',`allpension_mean',`pubpension_mean',`pripension_mean'"
-     if "`ccyy'" == "at04"  di "Inequality Measures 4,countryyear,inc1_conc_inc1,inc1_conc_inc2,inc1_conc_inc3,inc1_conc_inc4,inc2_conc_inc1,inc2_conc_inc2,inc2_conc_inc3,inc2_conc_inc4,inc3_conc_inc1,inc3_conc_inc2,inc3_conc_inc3,inc3_conc_inc4,inc4_conc_inc1,inc4_conc_inc2,inc4_conc_inc3,inc4_conc_inc4"
-     di "Inequality Measures 4,`ccyy',`inc1conc_inc1',`inc1conc_inc2',`inc1conc_inc3',`inc1conc_inc4',`inc2conc_inc1',`inc2conc_inc2',`inc2conc_inc3',`inc2conc_inc4',`inc3conc_inc1',`inc3conc_inc2',`inc3conc_inc3',`inc3conc_inc4',`inc4conc_inc1',`inc4conc_inc2',`inc4conc_inc3',`inc4conc_inc4'"
-     if "`ccyy'" == "at04"  di "Inequality Measures 5,countryyear,hxits_mean,hsscee_mean,hsscer_mean,hssc_mean,hxitsconc_inc3,hssceeconc_inc3,hsscerconc_inc3,hsscconc_inc3"
+   /*VA modif du display : on crée un tableau avec 78 colonnes*/
+     if "`ccyy'" == "at04" di "countryyear,decile,inc1_mean_1,inc1_min_1,inc1_max_1,transfer_mean_1,transfer_min_1,transfer_max_1,tax_mean_1,tax_min_1,tax_max_1,inc2_mean_2,inc2_min_2,inc2_max_2,transfer_mean_2,transfer_min_2,transfer_max_2,tax_mean_2,tax_min_2,tax_max_2,inc3_mean_3,inc3_min_3,inc3_max_3,transfer_mean_3,transfer_min_3,transfer_max_3,tax_mean_3,tax_min_3,tax_max_3,inc4_mean_4,inc4_min_4,inc4_max_4,transfer_mean_4,transfer_min_4,transfer_max_4,tax_mean_4,tax_min_4,tax_max_4,inc5_mean_5,inc5_min_5, inc5_max_5,transfer_mean_5,transfer_min_5,transfer_max_5,tax_mean_5,tax_min_5,tax_max_5,inc6_mean_6,inc6_min_6,inc6_max_6,transfer_mean_6,transfer_min_6,transfer_max_6,tax_mean_6,tax_min_6,tax_max_6"
+	 di "`ccyy',D01,`inc1_mean_1_1',`inc1_min_1_1',`inc1_max_1_1',`transfer_mean_1_1',`transfer_min_1_1',`transfer_max_1_1',`tax_mean_1_1',`tax_min_1_1',`tax_max_1_1',`inc2_mean_1_2',`inc2_min_1_2',`inc2_max_1_2',`transfer_mean_1_2',`transfer_min_1_2',`transfer_max_1_2',`tax_mean_1_2',`tax_min_1_2',`tax_max_1_2',`inc3_mean_1_3',`inc3_min_1_3',`inc3_max_1_3',`transfer_mean_1_3',`transfer_min_1_3',`transfer_max_1_3',`tax_mean_1_3',`tax_min_1_3',`tax_max_1_3',`inc4_mean_1_4',`inc4_min_1_4',`inc4_max_1_4',`transfer_mean_1_4',`transfer_min_1_4',`transfer_max_1_4',`tax_mean_1_4',`tax_min_1_4',`tax_max_1_4',`inc5_mean_1_5',`inc5_min_1_5',`inc5_max_1_5',`transfer_mean_1_5',`transfer_min_1_5',`transfer_max_1_5',`tax_mean_1_5',`tax_min_1_5',`tax_max_1_5',`inc6_mean_1_6',`inc6_min_1_6',`inc6_max_1_6',`transfer_mean_1_6',`transfer_min_1_6',`transfer_max_1_6',`tax_mean_1_6',`tax_min_1_6',`tax_max_1_6'"
+     di "`ccyy',D02,`inc1_mean_2_1',`inc1_min_2_1',`inc1_max_2_1',`transfer_mean_2_1',`transfer_min_2_1',`transfer_max_2_1',`tax_mean_2_1',`tax_min_2_1',`tax_max_2_1',`inc2_mean_2_2',`inc2_min_2_2',`inc2_max_2_2',`transfer_mean_2_2',`transfer_min_2_2',`transfer_max_2_2',`tax_mean_2_2',`tax_min_2_2',`tax_max_2_2',`inc3_mean_2_3',`inc3_min_2_3',`inc3_max_2_3',`transfer_mean_2_3',`transfer_min_2_3',`transfer_max_2_3',`tax_mean_2_3',`tax_min_2_3',`tax_max_2_3',`inc4_mean_2_4',`inc4_min_2_4',`inc4_max_2_4',`transfer_mean_2_4',`transfer_min_2_4',`transfer_max_2_4',`tax_mean_2_4',`tax_min_2_4',`tax_max_2_4',`inc5_mean_2_5',`inc5_min_2_5',`inc5_max_2_5',`transfer_mean_2_5',`transfer_min_2_5',`transfer_max_2_5',`tax_mean_2_5',`tax_min_2_5',`tax_max_2_5',`inc6_mean_2_6',`inc6_min_2_6',`inc6_max_2_6',`transfer_mean_2_6',`transfer_min_2_6',`transfer_max_2_6',`tax_mean_2_6',`tax_min_2_6',`tax_max_2_6'"
+     di "`ccyy',D03,`inc1_mean_3_1',`inc1_min_3_1',`inc1_max_3_1',`transfer_mean_3_1',`transfer_min_3_1',`transfer_max_3_1',`tax_mean_3_1',`tax_min_3_1',`tax_max_3_1',`inc2_mean_3_2',`inc2_min_3_2',`inc2_max_3_2',`transfer_mean_3_2',`transfer_min_3_2',`transfer_max_3_2',`tax_mean_3_2',`tax_min_3_2',`tax_max_3_2',`inc3_mean_3_3',`inc3_min_3_3',`inc3_max_3_3',`transfer_mean_3_3',`transfer_min_3_3',`transfer_max_3_3',`tax_mean_3_3',`tax_min_3_3',`tax_max_3_3',`inc4_mean_3_4',`inc4_min_3_4',`inc4_max_3_4',`transfer_mean_3_4',`transfer_min_3_4',`transfer_max_3_4',`tax_mean_3_4',`tax_min_3_4',`tax_max_3_4',`inc5_mean_3_5',`inc5_min_3_5',`inc5_max_3_5',`transfer_mean_3_5',`transfer_min_3_5',`transfer_max_3_5',`tax_mean_3_5',`tax_min_3_5',`tax_max_3_5',`inc6_mean_3_6',`inc6_min_3_6',`inc6_max_3_6',`transfer_mean_3_6',`transfer_min_3_6',`transfer_max_3_6',`tax_mean_3_6',`tax_min_3_6',`tax_max_3_6'"    
+	 di "`ccyy',D04,`inc1_mean_4_1',`inc1_min_4_1',`inc1_max_4_1',`transfer_mean_4_1',`transfer_min_4_1',`transfer_max_4_1',`tax_mean_4_1',`tax_min_4_1',`tax_max_4_1',`inc2_mean_4_2',`inc2_min_4_2',`inc2_max_4_2',`transfer_mean_4_2',`transfer_min_4_2',`transfer_max_4_2',`tax_mean_4_2',`tax_min_4_2',`tax_max_4_2',`inc3_mean_4_3',`inc3_min_4_3',`inc3_max_4_3',`transfer_mean_4_3',`transfer_min_4_3',`transfer_max_4_3',`tax_mean_4_3',`tax_min_4_3',`tax_max_4_3',`inc4_mean_4_4',`inc4_min_4_4',`inc4_max_4_4',`transfer_mean_4_4',`transfer_min_4_4',`transfer_max_4_4',`tax_mean_4_4',`tax_min_4_4',`tax_max_4_4',`inc5_mean_4_5',`inc5_min_4_5',`inc5_max_4_5',`transfer_mean_4_5',`transfer_min_4_5',`transfer_max_4_5',`tax_mean_4_5',`tax_min_4_5',`tax_max_4_5',`inc6_mean_4_6',`inc6_min_4_6',`inc6_max_4_6',`transfer_mean_4_6',`transfer_min_4_6',`transfer_max_4_6',`tax_mean_4_6',`tax_min_4_6',`tax_max_4_6'"
+     di "`ccyy',D05,`inc1_mean_5_1',`inc1_min_5_1',`inc1_max_5_1',`transfer_mean_5_1',`transfer_min_5_1',`transfer_max_5_1',`tax_mean_5_1',`tax_min_5_1',`tax_max_5_1',`inc2_mean_5_2',`inc2_min_5_2',`inc2_max_5_2',`transfer_mean_5_2',`transfer_min_5_2',`transfer_max_5_2',`tax_mean_5_2',`tax_min_5_2',`tax_max_5_2',`inc3_mean_5_3',`inc3_min_5_3',`inc3_max_5_3',`transfer_mean_5_3',`transfer_min_5_3',`transfer_max_5_3',`tax_mean_5_3',`tax_min_5_3',`tax_max_5_3',`inc4_mean_5_4',`inc4_min_5_4',`inc4_max_5_4',`transfer_mean_5_4',`transfer_min_5_4',`transfer_max_5_4',`tax_mean_5_4',`tax_min_5_4',`tax_max_5_4',`inc5_mean_5_5',`inc5_min_5_5',`inc5_max_5_5',`transfer_mean_5_5',`transfer_min_5_5',`transfer_max_5_5',`tax_mean_5_5',`tax_min_5_5',`tax_max_5_5',`inc6_mean_5_6',`inc6_min_5_6',`inc6_max_5_6',`transfer_mean_5_6',`transfer_min_5_6',`transfer_max_5_6',`tax_mean_5_6',`tax_min_5_6',`tax_max_5_6'"
+     di "`ccyy',D06,`inc1_mean_6_1',`inc1_min_6_1',`inc1_max_6_1',`transfer_mean_6_1',`transfer_min_6_1',`transfer_max_6_1',`tax_mean_6_1',`tax_min_6_1',`tax_max_6_1',`inc2_mean_6_2',`inc2_min_6_2',`inc2_max_6_2',`transfer_mean_6_2',`transfer_min_6_2',`transfer_max_6_2',`tax_mean_6_2',`tax_min_6_2',`tax_max_6_2',`inc3_mean_6_3',`inc3_min_6_3',`inc3_max_6_3',`transfer_mean_6_3',`transfer_min_6_3',`transfer_max_6_3',`tax_mean_6_3',`tax_min_6_3',`tax_max_6_3',`inc4_mean_6_4',`inc4_min_6_4',`inc4_max_6_4',`transfer_mean_6_4',`transfer_min_6_4',`transfer_max_6_4',`tax_mean_6_4',`tax_min_6_4',`tax_max_6_4',`inc5_mean_6_5',`inc5_min_6_5',`inc5_max_6_5',`transfer_mean_6_5',`transfer_min_6_5',`transfer_max_6_5',`tax_mean_6_5',`tax_min_6_5',`tax_max_6_5',`inc6_mean_6_6',`inc6_min_6_6',`inc6_max_6_6',`transfer_mean_6_6',`transfer_min_6_6',`transfer_max_6_6',`tax_mean_6_6',`tax_min_6_6',`tax_max_6_6'"
+     di "`ccyy',D07,`inc1_mean_7_1',`inc1_min_7_1',`inc1_max_7_1',`transfer_mean_7_1',`transfer_min_7_1',`transfer_max_7_1',`tax_mean_7_1',`tax_min_7_1',`tax_max_7_1',`inc2_mean_7_2',`inc2_min_7_2',`inc2_max_7_2',`transfer_mean_7_2',`transfer_min_7_2',`transfer_max_7_2',`tax_mean_7_2',`tax_min_7_2',`tax_max_7_2',`inc3_mean_7_3',`inc3_min_7_3',`inc3_max_7_3',`transfer_mean_7_3',`transfer_min_7_3',`transfer_max_7_3',`tax_mean_7_3',`tax_min_7_3',`tax_max_7_3',`inc4_mean_7_4',`inc4_min_7_4',`inc4_max_7_4',`transfer_mean_7_4',`transfer_min_7_4',`transfer_max_7_4',`tax_mean_7_4',`tax_min_7_4',`tax_max_7_4',`inc5_mean_7_5',`inc5_min_7_5',`inc5_max_7_5',`transfer_mean_7_5',`transfer_min_7_5',`transfer_max_7_5',`tax_mean_7_5',`tax_min_7_5',`tax_max_7_5',`inc6_mean_7_6',`inc6_min_7_6',`inc6_max_7_6',`transfer_mean_7_6',`transfer_min_7_6',`transfer_max_7_6',`tax_mean_7_6',`tax_min_7_6',`tax_max_7_6'"
+     di "`ccyy',D08,`inc1_mean_8_1',`inc1_min_8_1',`inc1_max_8_1',`transfer_mean_8_1',`transfer_min_8_1',`transfer_max_8_1',`tax_mean_8_1',`tax_min_8_1',`tax_max_8_1',`inc2_mean_8_2',`inc2_min_8_2',`inc2_max_8_2',`transfer_mean_8_2',`transfer_min_8_2',`transfer_max_8_2',`tax_mean_8_2',`tax_min_8_2',`tax_max_8_2',`inc3_mean_8_3',`inc3_min_8_3',`inc3_max_8_3',`transfer_mean_8_3',`transfer_min_8_3',`transfer_max_8_3',`tax_mean_8_3',`tax_min_8_3',`tax_max_8_3',`inc4_mean_8_4',`inc4_min_8_4',`inc4_max_8_4',`transfer_mean_8_4',`transfer_min_8_4',`transfer_max_8_4',`tax_mean_8_4',`tax_min_8_4',`tax_max_8_4',`inc5_mean_8_5',`inc5_min_8_5',`inc5_max_8_5',`transfer_mean_8_5',`transfer_min_8_5',`transfer_max_8_5',`tax_mean_8_5',`tax_min_8_5',`tax_max_8_5',`inc6_mean_8_6',`inc6_min_8_6',`inc6_max_8_6',`transfer_mean_8_6',`transfer_min_8_6',`transfer_max_8_6',`tax_mean_8_6',`tax_min_8_6',`tax_max_8_6'"
+     di "`ccyy',D09,`inc1_mean_9_1',`inc1_min_9_1',`inc1_max_9_1',`transfer_mean_9_1',`transfer_min_9_1',`transfer_max_9_1',`tax_mean_9_1',`tax_min_9_1',`tax_max_9_1',`inc2_mean_9_2',`inc2_min_9_2',`inc2_max_9_2',`transfer_mean_9_2',`transfer_min_9_2',`transfer_max_9_2',`tax_mean_9_2',`tax_min_9_2',`tax_max_9_2',`inc3_mean_9_3',`inc3_min_9_3',`inc3_max_9_3',`transfer_mean_9_3',`transfer_min_9_3',`transfer_max_9_3',`tax_mean_9_3',`tax_min_9_3',`tax_max_9_3',`inc4_mean_9_4',`inc4_min_9_4',`inc4_max_9_4',`transfer_mean_9_4',`transfer_min_9_4',`transfer_max_9_4',`tax_mean_9_4',`tax_min_9_4',`tax_max_9_4',`inc5_mean_9_5',`inc5_min_9_5',`inc5_max_9_5',`transfer_mean_9_5',`transfer_min_9_5',`transfer_max_9_5',`tax_mean_9_5',`tax_min_9_5',`tax_max_9_5',`inc6_mean_9_6',`inc6_min_9_6',`inc6_max_9_6',`transfer_mean_9_6',`transfer_min_9_6',`transfer_max_9_6',`tax_mean_9_6',`tax_min_9_6',`tax_max_9_6'"
+	 di "`ccyy',D10,`inc1_mean_10_1',`inc1_min_10_1',`inc1_max_10_1',`transfer_mean_10_1',`transfer_min_10_1',`transfer_max_10_1',`tax_mean_10_1',`tax_min_10_1',`tax_max_10_1',`inc2_mean_10_2',`inc2_min_10_2',`inc2_max_10_2',`transfer_mean_10_2',`transfer_min_10_2',`transfer_max_10_2',`tax_mean_10_2',`tax_min_10_2',`tax_max_10_2',`inc3_mean_10_3',`inc3_min_10_3',`inc3_max_10_3',`transfer_mean_10_3',`transfer_min_10_3',`transfer_max_10_3',`tax_mean_10_3',`tax_min_10_3',`tax_max_10_3',`inc4_mean_10_4',`inc4_min_10_4',`inc4_max_10_4',`transfer_mean_10_4',`transfer_min_10_4',`transfer_max_10_4',`tax_mean_10_4',`tax_min_10_4',`tax_max_10_4',`inc5_mean_10_5',`inc5_min_10_5',`inc5_max_10_5',`transfer_mean_10_5',`transfer_min_10_5',`transfer_max_10_5',`tax_mean_10_5',`tax_min_10_5',`tax_max_10_5',`inc6_mean_10_6',`inc6_min_10_6',`inc6_max_10_6',`transfer_mean_10_6',`transfer_min_10_6',`transfer_max_10_6',`tax_mean_10_6',`tax_min_10_6',`tax_max_10_6'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 1,countryyear,inc1_gini,inc2_gini,inc3_gini,inc4_gini, inc5_gini, inc6_gini, dhi_gini,transfer_conc_inc1,transfer_conc_inc2,transfer_conc_inc3,transfer_conc_inc4,transfer_conc_inc5, transfer_conc_inc6,tax_conc_inc1,tax_conc_inc2,tax_conc_inc3,tax_conc_inc4, tax_conc_inc5, tax_conc_inc6"
+     di "Inequality Measures 1,`ccyy',`inc1_gini',`inc2_gini',`inc3_gini',`inc4_gini',`inc5_gini',`inc6_gini',`dhi_gini',`transferconc_inc1',`transferconc_inc2',`transferconc_inc3',`transferconc_inc4',`transferconc_inc5',`transferconc_inc6',`taxconc_inc1',`taxconc_inc2',`taxconc_inc3',`taxconc_inc4', `taxconc_inc5', `taxconc_inc6'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 2,countryyear,allpension_conc_inc1,allpension_conc_inc2,allpension_conc_inc3,allpension_conc_inc4, allpension_conc_inc5, allpension_conc_inc6,pubpension_conc_inc1,pubpension_conc_inc2,pubpension_conc_inc3,pubpension_conc_inc4,pubpension_conc_inc5, pubpension_conc_inc6, pripension_conc_inc1, pripension_conc_inc2,pripension_conc_inc3,pripension_conc_inc4, pripension_conc_inc5, pripension_conc_inc6"
+     di "Inequality Measures 2,`ccyy',`allpensionconc_inc1',`allpensionconc_inc2',`allpensionconc_inc3',`allpensionconc_inc4', `allpensionconc_inc5', `allpensionconc_inc6', `pubpensionconc_inc1',`pubpensionconc_inc2',`pubpensionconc_inc3',`pubpensionconc_inc4',`pubpensionconc_inc5', `pubpensionconc_inc6',`pripensionconc_inc1',`pripensionconc_inc2',`pripensionconc_inc3',`pripensionconc_inc4', `pripensionconc_inc5', `pripensionconc_inc6'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 3,countryyear,inc1_mean,inc2_mean,inc3_mean,inc4_mean,inc5_mean, inc6_mean, dhi_mean,transfer_mean,tax_mean,allpension_mean,pubpension_mean,pripension_mean"
+     di "Inequality Measures 3,`ccyy',`inc1_mean',`inc2_mean',`inc3_mean',`inc4_mean',`inc5_mean',`inc6_mean',`dhi_mean',`transfer_mean',`tax_mean',`allpension_mean',`pubpension_mean',`pripension_mean'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 4,countryyear,inc1_conc_inc1,inc2_conc_inc2,inc3_conc_inc3,inc4_conc_inc4,inc5_conc_inc5,inc6_conc_inc6"
+     di "Inequality Measures 4,`ccyy',`inc1conc_inc1',`inc2conc_inc2',`inc3conc_inc3',`inc4conc_inc4',`inc5conc_inc5',`inc6conc_inc6'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 5,countryyear,hxits_mean,hsscee_mean,hsscer_mean,hssc_mean,hxitsconc_inc3,hssceeconc_inc3,hsscerconc_inc3,hsscconc_inc3"
      di "Inequality Measures 5,`ccyy',`hxits_mean',`hsscee_mean',`hsscer_mean',`hssc_mean',`hxitsconc_inc3',`hssceeconc_inc3',`hsscerconc_inc3',`hsscconc_inc3'"
-	 if "`ccyy'" == "at04"  di "Inequality Measures 6,countryyear,hhaa_inc1_gini,hhaa_inc2_gini,hhaa_inc3_gini,hhaa_inc4_gini,hhaa_dhi_gini,hhaa_transfer_conc_inc1,hhaa_transfer_conc_inc2,hhaa_tax_conc_inc1,hhaa_tax_conc_inc2,hhaa_tax_conc_inc3,hhaa_tax_conc_inc4"
-	 di "Inequality Measures 6,`ccyy',`hhaa_inc1_gini',`hhaa_inc2_gini',`hhaa_inc3_gini',`hhaa_inc4_gini',`hhaa_dhi_gini',`hhaa_transferconc_inc1',`hhaa_transferconc_inc2',`hhaa_taxconc_inc1',`hhaa_taxconc_inc2',`hhaa_taxconc_inc3',`hhaa_taxconc_inc4'"
-	 if "`ccyy'" == "at04"  di "Inequality Measures 7,countryyear,hhaa_inc1_mean,hhaa_inc2_mean,hhaa_inc3_mean,hhaa_inc4_mean,hhaa_dhi_mean,hhaa_transfer_mean,hhaa_tax_mean,hhaa_allpension_mean,hhaa_pubpension_mean,hhaa_pripension_mean"
-     di "Inequality Measures 7,`ccyy',`hhaa_inc1_mean',`hhaa_inc2_mean',`hhaa_inc3_mean',`hhaa_inc4_mean',`hhaa_dhi_mean',`hhaa_transfer_mean',`hhaa_tax_mean',`hhaa_allpension_mean',`hhaa_pubpension_mean',`hhaa_pripension_mean'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 6,countryyear,hhaa_inc1_gini,hhaa_inc2_gini,hhaa_inc3_gini,hhaa_inc4_gini,hhaa_inc5_gini,hhaa_inc6_gini,hhaa_dhi_gini,hhaa_transfer_conc_inc1,hhaa_transfer_conc_inc2,hhaa_transfer_conc_inc3,hhaa_transfer_conc_inc4,hhaa_transfer_conc_inc5,hhaa_transfer_conc_inc6,hhaa_tax_conc_inc1,hhaa_tax_conc_inc2,hhaa_tax_conc_inc3,hhaa_tax_conc_inc4,hhaa_tax_conc_inc5, hhaa_tax_conc_inc6"
+	 di "Inequality Measures 6,`ccyy',`hhaa_inc1_gini',`hhaa_inc2_gini',`hhaa_inc3_gini',`hhaa_inc4_gini', `hhaa_inc5_gini', `hhaa_inc6_gini',`hhaa_dhi_gini',`hhaa_transferconc_inc1',`hhaa_transferconc_inc2', `hhaa_transferconc_inc3', `hhaa_transferconc_inc4', `hhaa_transferconc_inc5', `hhaa_transferconc_inc6',`hhaa_taxconc_inc1',`hhaa_taxconc_inc2',`hhaa_taxconc_inc3',`hhaa_taxconc_inc4', `hhaa_taxconc_inc5', `hhaa_taxconc_inc6'"
+	 if "`ccyy'" == "at04"  di "Inequality Measures 7,countryyear,hhaa_inc1_mean,hhaa_inc2_mean,hhaa_inc3_mean,hhaa_inc4_mean, hhaa_inc5_mean, hhaa_inc6_mean,hhaa_dhi_mean,hhaa_transfer_mean,hhaa_tax_mean,hhaa_allpension_mean,hhaa_pubpension_mean,hhaa_pripension_mean"
+     di "Inequality Measures 7,`ccyy',`hhaa_inc1_mean',`hhaa_inc2_mean',`hhaa_inc3_mean',`hhaa_inc4_mean', `hhaa_inc5_mean', `hhaa_inc6_mean',`hhaa_dhi_mean',`hhaa_transfer_mean',`hhaa_tax_mean',`hhaa_allpension_mean',`hhaa_pubpension_mean',`hhaa_pripension_mean'"
  }
 
 program drop _all
